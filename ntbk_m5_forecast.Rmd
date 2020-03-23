@@ -1,0 +1,197 @@
+---
+title: "M5 Forecasting Accuracy"
+abstract: "The purpose of this notebook is to learn how to forecast more accurately"
+output: 
+  html_notebook:
+    theme: cosmo
+---
+
+# Notes
+
+https://www.kaggle.com/headsortails/back-to-predict-the-future-interactive-m5-eda
+
+https://www.kaggle.com/arindamgot/eda-prophet-mlp-neural-network-forecasting
+
+
+# Libraries
+
+```{r echo=TRUE, eval=TRUE, message=FALSE}
+library(data.table)  # Data frame
+library(dplyr)  # Data Wrangling
+library(tidyr) # Data Wrangling
+library(plotly)  # Interactive Plotting
+library(lubridate)  # Dates
+library(kableExtra)  # Table Formatting
+
+#Forecasting
+library(prophet)
+library(forecast)
+
+# Data Summary
+library(skimr)
+```
+
+# Import Data
+
+```{r}
+df.train.validate <- fread("~/R/M5_Forecasting_Accuracy/Data/sales_train_validation.csv", stringsAsFactors = FALSE)
+df.calendar <- fread("~/R/M5_Forecasting_Accuracy/Data/calendar.csv", stringsAsFactors = FALSE)
+df.sales <- fread("~/R/M5_Forecasting_Accuracy/Data/sell_prices.csv", stringsAsFactors = FALSE)
+```
+
+# Scan Data {.tabset}
+
+## Sales
+
+```{r}
+df.sales %>% skim()
+```
+
+## Train Validate Data
+
+```{r}
+df.train.validate %>% skim()
+```
+
+## Calendar Data
+
+```{r}
+df.calendar %>% skim()
+```
+
+Doesn't appear that there are any NULL/NA values in any of our datasets.  Obviously, in the real world, no data set will ever be that clean.  
+
+# Exploratory Data Analysis
+
+## File 1:  Calendar Data
+
+```{r}
+head(df.calendar)
+```
+
+```{r}
+df.calendar %>% group_by(event_name_1) %>% tally() %>% 
+  arrange(-n) %>% 
+  head(5) %>%
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F)
+```
+
+```{r}
+df.calendar %>% group_by(event_type_1) %>% tally() %>%
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F)
+```
+
+```{r}
+df.calendar %>% group_by(event_name_2) %>% tally()
+```
+
+```{r}
+df.calendar %>% group_by(event_type_2) %>% tally()
+```
+
+
+## File 2:  Sales Data
+
+```{r}
+head(df.sales)
+```
+
+```{r}
+df.sales %>% group_by(store_id) %>% 
+```
+
+## File 3: Train
+
+```{r}
+df.train.validate %>% select(seq(1,10,1)) %>% head() %>% kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F)
+```
+
+Based on the documentation provided, the daily unit sales start from 1/29/2011, so we must convert the column names into actual dates.  
+
+>**Helper Function:** `extract_ts` which I found from a different notebook will convert that.
+
+```{r}
+gregexpr("_","D_1223")[[1]][1]
+```
+
+```{r}
+#Reference Date of the Sales
+date.start <- as.Date('2011-01-29')
+
+df <- df.train.validate %>% 
+  gather(dt_code, sales, starts_with("d_")) %>% # transpose the sales date columns
+  mutate(sales_date=date.start -1 + as.integer(substr(dt_code,gregexpr("_",dt_code)[[1]][1]+1,nchar(dt_code)))) %>% # convert those dates into an actual date 
+  select(-dt_code) # don't need this column anymore, so I want to save some space
+  
+```
+
+```{r}
+df %>% group_by(state_id, sales_date) %>% 
+  summarize(totalsales=sum(sales, na.rm=TRUE))
+```
+
+
+```{r}
+df.train.validate %>% group_by(state_id) %>%
+  summarise_at(vars(starts_with("d_")),sum) 
+```
+
+
+
+# Appendix
+
+## Data Dictionary
+
+File 1: “calendar.csv” 
+Contains information about the dates the products are sold.
+**date:** The date in a “y-m-d” format.
+**wm_yr_wk:** The id of the week the date belongs to.
+**weekday:** The type of the day (Saturday, Sunday, …, Friday).
+**wday:** The id of the weekday, starting from Saturday.
+**month:** The month of the date.
+**year:** The year of the date.
+**event_name_1:** If the date includes an event, the name of this event.
+**event_type_1:** If the date includes an event, the type of this event.
+**event_name_2:** If the date includes a second event, the name of this event.
+**event_type_2:** If the date includes a second event, the type of this event.
+**snap_CA, snap_TX, and snap_WI:** A binary variable (0 or 1) indicating whether the stores of CA, TX or WI allow SNAP purchases on the examined date. 1 indicates that SNAP purchases are allowed.
+
+
+**SNAP:**  The United States federal government provides a nutrition assistance benefit called the Supplement Nutrition Assistance Program (SNAP).  SNAP provides low income families and individuals with an Electronic Benefits Transfer debit card to purchase food products.  In many states, the monetary benefits are dispersed to people across 10 days of the month and on each of these days 1/10 of the people will receive the benefit on their card.  More information about the SNAP program can be found here: https://www.fns.usda.gov/snap/supplemental-nutrition-assistance-program 
+
+File 2: “sell_prices.csv”
+Contains information about the price of the products sold per store and date.
+**store_id:** The id of the store where the product is sold. 
+**item_id:** The id of the product.
+**wm_yr_wk:** The id of the week.
+**sell_price:** The price of the product for the given week/store. The price is provided per week (average across seven days). If not available, this means that the product was not sold during the examined week. Note that although prices are constant at weekly basis, they may change through time (both training and test set).  
+
+File 3: “sales_train.csv” 
+Contains the historical daily unit sales data per product and store.
+**item_id:** The id of the product.
+**dept_id:** The id of the department the product belongs to.
+**cat_id:** The id of the category the product belongs to.
+**store_id:** The id of the store where the product is sold.
+**state_id:** The State where the store is located.
+**d_1, d_2, …, d_i, … d_1941:** The number of units sold at day i, starting from 2011-01-29. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
