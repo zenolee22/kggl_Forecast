@@ -21,7 +21,6 @@ library(dplyr)  # Data Wrangling
 library(tidyr) # Data Wrangling
 library(plotly)  # Interactive Plotting
 library(lubridate)  # Dates
-library(kableExtra)  # Table Formatting
 
 #Forecasting
 library(prophet)
@@ -29,6 +28,18 @@ library(forecast)
 
 # Data Summary
 library(skimr)
+
+# Formmatting
+library(shiny) # htaml formatting
+library(kableExtra)  # Table Formatting
+library(RColorBrewer) # Color Palettes
+```
+
+
+```{r}
+mycolors <- brewer.pal(8,"Set3")
+
+#colorRampPalette(brewer.pal(9,”Blues”))
 ```
 
 # Import Data
@@ -113,9 +124,6 @@ Based on the documentation provided, the daily unit sales start from 1/29/2011, 
 
 >**Helper Function:** `extract_ts` which I found from a different notebook will convert that.
 
-```{r}
-gregexpr("_","D_1223")[[1]][1]
-```
 
 ```{r}
 #Reference Date of the Sales
@@ -129,17 +137,116 @@ df <- df.train.validate %>%
 ```
 
 ```{r}
-df %>% group_by(state_id, sales_date) %>% 
-  summarize(totalsales=sum(sales, na.rm=TRUE))
+df %>% group_by(state_id) %>% 
+  summarize(totalsales=sum(sales, na.rm=TRUE)) %>%
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F)
+```
+
+### CA
+```{r}
+temp <- df %>% filter(state_id=="CA") %>% group_by(sales_date) %>% summarize(sales=sum(sales, na.rm=TRUE)) 
+
+
+p <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$sales_date, y=temp$sales)
+
+fluidPage(fluidRow(p))
+```
+
+The majority of all sales is in Food for CA
+
+```{r}
+df %>% filter(state_id=="CA") %>% group_by(cat_id) %>% summarize(sales=sum(sales,na.rm=TRUE)) %>%
+  kable() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F)
 ```
 
 
 ```{r}
-df.train.validate %>% group_by(state_id) %>%
-  summarise_at(vars(starts_with("d_")),sum) 
+temp <- df %>% filter(state_id=="CA") %>% 
+  group_by(cat_id, sales_date) %>% 
+  summarize(sales=sum(sales, na.rm=TRUE)) 
+
+p <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$sales_date[temp$cat_id=="FOODS"]
+            , y=temp$sales[temp$cat_id=="FOODS"]
+            ,name="FOODS"
+            ,line=list(color=mycolors[3])) 
+
+q <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$sales_date[temp$cat_id=="HOBBIES"]
+            , y=temp$sales[temp$cat_id=="HOBBIES"]
+            ,name="HOBBIES"
+            ,line=list(color=mycolors[1])) 
+
+s <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$sales_date[temp$cat_id=="HOUSEHOLD"]
+            , y=temp$sales[temp$cat_id=="HOUSEHOLD"]
+            ,name="HOUSEHOLD"
+            ,line=list(color=mycolors[4])) 
+  
+
+fluidPage(fluidRow(p), fluidRow(q), fluidRow(s))
 ```
 
+### TX
 
+```{r}
+temp <- df %>% filter(state_id=="TX") %>% 
+  group_by(cat_id, sales_date) %>% 
+  summarize(sales=sum(sales, na.rm=TRUE)) 
+
+p <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$sales_date[temp$cat_id=="FOODS"]
+            , y=temp$sales[temp$cat_id=="FOODS"]
+            ,name="FOODS"
+            ,line=list(color=mycolors[3])) 
+
+q <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$sales_date[temp$cat_id=="HOBBIES"]
+            , y=temp$sales[temp$cat_id=="HOBBIES"]
+            ,name="HOBBIES"
+            ,line=list(color=mycolors[1])) 
+
+s <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$sales_date[temp$cat_id=="HOUSEHOLD"]
+            , y=temp$sales[temp$cat_id=="HOUSEHOLD"]
+            ,name="HOUSEHOLD"
+            ,line=list(color=mycolors[4])) 
+  
+
+fluidPage(fluidRow(p), fluidRow(q), fluidRow(s))
+```
+
+### WI
+
+```{r}
+temp <- df %>% filter(state_id=="WI") %>% 
+  group_by(cat_id, sales_date) %>% 
+  summarize(sales=sum(sales, na.rm=TRUE)) 
+
+p <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$sales_date[temp$cat_id=="FOODS"]
+            , y=temp$sales[temp$cat_id=="FOODS"]
+            ,name="FOODS"
+            ,line=list(color=mycolors[3])) 
+
+q <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$sales_date[temp$cat_id=="HOBBIES"]
+            , y=temp$sales[temp$cat_id=="HOBBIES"]
+            ,name="HOBBIES"
+            ,line=list(color=mycolors[1])) 
+
+s <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$sales_date[temp$cat_id=="HOUSEHOLD"]
+            , y=temp$sales[temp$cat_id=="HOUSEHOLD"]
+            ,name="HOUSEHOLD"
+            ,line=list(color=mycolors[4])) 
+  
+
+fluidPage(fluidRow(p), fluidRow(q), fluidRow(s))
+```
 
 # Appendix
 
