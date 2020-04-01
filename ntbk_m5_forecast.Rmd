@@ -47,7 +47,7 @@ mycolors <- brewer.pal(8,"Set3")
 ```{r}
 df.train.validate <- fread("~/R/M5_Forecasting_Accuracy/Data/sales_train_validation.csv", stringsAsFactors = FALSE)
 df.calendar <- fread("~/R/M5_Forecasting_Accuracy/Data/calendar.csv", stringsAsFactors = FALSE)
-df.sales <- fread("~/R/M5_Forecasting_Accuracy/Data/sell_prices.csv", stringsAsFactors = FALSE)
+df.sellprices <- fread("~/R/M5_Forecasting_Accuracy/Data/sell_prices.csv", stringsAsFactors = FALSE)
 ```
 
 # Scan Data {.tabset}
@@ -55,7 +55,7 @@ df.sales <- fread("~/R/M5_Forecasting_Accuracy/Data/sell_prices.csv", stringsAsF
 ## Sales
 
 ```{r}
-df.sales %>% skim()
+df.sellprices %>% skim()
 ```
 
 ## Train Validate Data
@@ -138,7 +138,7 @@ df <- df.train.validate %>%
 
 ```{r}
 df %>% group_by(state_id) %>% 
-  summarize(totalsales=sum(sales, na.rm=TRUE)) %>%
+  summarize(totalsales=format(sum(sales, na.rm=TRUE),big.mark = ",")) %>%
   kable() %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F)
 ```
@@ -162,6 +162,7 @@ df %>% filter(state_id=="CA") %>% group_by(cat_id) %>% summarize(sales=sum(sales
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F)
 ```
 
+#### By Day Plots
 
 ```{r}
 temp <- df %>% filter(state_id=="CA") %>% 
@@ -189,6 +190,145 @@ s <- plot_ly(type="scatter",mode="lines") %>%
 
 fluidPage(fluidRow(p), fluidRow(q), fluidRow(s))
 ```
+
+#### By Month Plots
+
+It's much clearer to see that there is definitely a significant change in sales between 2012 and 2013 for hobbies.
+
+```{r}
+temp <- df %>% filter(state_id=="CA") %>% 
+  mutate(YrMth=format(sales_date,"%Y-%m")) %>%
+  group_by(YrMth, cat_id) %>% 
+  summarize(sales=sum(sales, na.rm=TRUE)) 
+
+p <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="FOODS"]
+            , y=temp$sales[temp$cat_id=="FOODS"]
+            ,name="FOODS"
+            ,line=list(color=mycolors[3])) 
+q <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="HOBBIES"]
+            , y=temp$sales[temp$cat_id=="HOBBIES"]
+            ,name="HOBBIES"
+            ,line=list(color=mycolors[1])) 
+
+s <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="HOUSEHOLD"]
+            , y=temp$sales[temp$cat_id=="HOUSEHOLD"]
+            ,name="HOUSEHOLD"
+            ,line=list(color=mycolors[4])) 
+  
+
+fluidPage(fluidRow(p), fluidRow(q), fluidRow(s))
+
+```
+
+```{r}
+df %>% filter(state_id=="CA") %>% 
+  group_by(store_id) %>% 
+  summarize(sales=sum(sales, na.rm=TRUE))
+```
+
+Store #3 has the highest volume of sales.  If anything, many of the trends would be overshadowed by thiem since they are greater than stores 2 and 4 combined.
+
+```{r}
+df %>% filter(state_id=="CA") %>% 
+  group_by(store_id, cat_id) %>% 
+  summarize(sales=sum(sales, na.rm=TRUE)) %>% spread(cat_id, sales)
+```
+
+```{r}
+temp <- df %>% filter(state_id=="CA") %>% 
+  mutate(YrMth=format(sales_date,"%Y-%m")) %>%
+  group_by(YrMth, store_id, cat_id) %>% 
+  summarize(sales=sum(sales, na.rm=TRUE)) 
+
+p <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="FOODS" & temp$store_id=="CA_1"]
+            , y=temp$sales[temp$cat_id=="FOODS" & temp$store_id=="CA_1"]
+            ,name="FOODS - CA_1"
+            ,line=list(color=mycolors[4])) %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="FOODS" & temp$store_id=="CA_2"]
+            , y=temp$sales[temp$cat_id=="FOODS" & temp$store_id=="CA_2"]
+            ,name="FOODS - CA_2"
+            ,line=list(color=mycolors[5])) %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="FOODS" & temp$store_id=="CA_3"]
+            , y=temp$sales[temp$cat_id=="FOODS" & temp$store_id=="CA_3"]
+            ,name="FOODS - CA_3"
+            ,line=list(color=mycolors[6])) %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="FOODS" & temp$store_id=="CA_4"]
+            , y=temp$sales[temp$cat_id=="FOODS" & temp$store_id=="CA_4"]
+            ,name="FOODS - CA_4"
+            ,line=list(color=mycolors[7])) 
+
+q <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="HOBBIES" & temp$store_id=="CA_1"]
+            , y=temp$sales[temp$cat_id=="HOBBIES" & temp$store_id=="CA_1"]
+            ,name="HOBBIES - CA_1"
+            ,line=list(color=mycolors[4])) %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="HOBBIES" & temp$store_id=="CA_2"]
+            , y=temp$sales[temp$cat_id=="HOBBIES" & temp$store_id=="CA_2"]
+            ,name="HOBBIES - CA_2"
+            ,line=list(color=mycolors[5])) %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="HOBBIES" & temp$store_id=="CA_3"]
+            , y=temp$sales[temp$cat_id=="HOBBIES" & temp$store_id=="CA_3"]
+            ,name="HOBBIES - CA_3"
+            ,line=list(color=mycolors[6])) %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="HOBBIES" & temp$store_id=="CA_4"]
+            , y=temp$sales[temp$cat_id=="HOBBIES" & temp$store_id=="CA_4"]
+            ,name="HOBBIES - CA_4"
+            ,line=list(color=mycolors[7])) 
+
+s <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="HOUSEHOLD" & temp$store_id=="CA_1"]
+            , y=temp$sales[temp$cat_id=="HOUSEHOLD" & temp$store_id=="CA_1"]
+            ,name="HOUSEHOLD - CA_1"
+            ,line=list(color=mycolors[4])) %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="HOUSEHOLD" & temp$store_id=="CA_2"]
+            , y=temp$sales[temp$cat_id=="HOUSEHOLD" & temp$store_id=="CA_2"]
+            ,name="HOUSEHOLD - CA_2"
+            ,line=list(color=mycolors[5])) %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="HOUSEHOLD" & temp$store_id=="CA_3"]
+            , y=temp$sales[temp$cat_id=="HOUSEHOLD" & temp$store_id=="CA_3"]
+            ,name="HOUSEHOLD - CA_3"
+            ,line=list(color=mycolors[6])) %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="HOUSEHOLD" & temp$store_id=="CA_4"]
+            , y=temp$sales[temp$cat_id=="HOUSEHOLD" & temp$store_id=="CA_4"]
+            ,name="HOUSEHOLD - CA_4"
+            ,line=list(color=mycolors[7])) 
+fluidPage(fluidRow(p), fluidRow(q), fluidRow(s))
+```
+
+```{r}
+df %>% filter(state_id=="CA", cat_id=="FOODS") %>% group_by(item_id) %>% summarize(sales=sum(sales, na.rm=TRUE)) %>% arrange(desc(item_id))
+```
+
+
+```{r}
+temp <- df %>% filter(state_id=="CA", store_id=="CA_1", cat_id=="FOOD") %>% 
+  mutate(YrMth=format(sales_date,"%Y-%m")) %>%
+  group_by(YrMth, item_id) %>% 
+  summarize(sales=sum(sales, na.rm=TRUE)) 
+
+p <- plot_ly(type="scatter",mode="lines") %>%
+  add_trace(x=temp$YrMth[temp$cat_id=="FOODS" & temp$store_id=="CA_1"]
+            , y=temp$sales[temp$cat_id=="FOODS" & temp$store_id=="CA_1"]
+            ,name="FOODS - CA_1"
+            ,line=list(color=mycolors[4]))
+```
+
+### Answering the anomalies
+
+2011-01-29
+
+```{r}
+df.sellprices %>% summarize(mindate = min(wm_yr_wk))
+```
+
+```{r}
+head(df)
+```
+
 
 ### TX
 
